@@ -1,0 +1,326 @@
+---
+title: "total_stats"
+author: "Grace Chung"
+date: "2023-04-12"
+output: html_document
+---
+
+# Load Packages
+```{r}
+library('tidyverse')
+library('lme4')
+library('lmerTest')
+library("tidymodels")
+library("ggtext")
+library("ggpubr")
+library("stats")
+```
+
+# Set working directory
+```{r}
+setwd("/Users/gracechungm/Desktop/Portfolio Materials/thesis/Code/Metadata for R/")
+```
+
+# Set figure parameters: sizes for text, points, and axes
+```{r}
+text_size = 15
+triangle_size = 1.5 
+cross_size = 1.5
+axis_size = 20
+```
+
+# Create dataframes by importing csv's.
+## Make dataframes for the 12-30C treatments by importing the spring_natural csv. 
+```{r}
+# dataframe of all data for the 12-30C treatments.
+spring_df <- read.csv("spring_natural.csv")%>% select(-("bubble_dist_mm"))
+
+# dataframe for all 12-30C trials that have a measured bubble size.
+spring_size <- spring_df[!is.na(spring_df$max_size_mm2),]
+
+# dataframe for all 12-30C trials that have a measured sound pressure level (SPL).
+spring_SPL <- spring_df[!is.na(spring_df$max_SPL),] 
+```
+
+## Make a dataframe (all_33) of all data for the 33C treatment by importing both the spring_33 and summer_33 csv.
+```{r}
+spring_33 <- read.csv("spring_33.csv") %>% select(c(shrimp_ID, video_ID, Temperature, acc_hr, use_SPL, max_SPL, body_mass_g, DactylLength_mm, use_distance, use_bubble, max_size_mm2, growth_ms, collapse_ms, rebound_ms, col_rate_mm2pms))
+
+summer_33 <- read.csv("summer_33.csv") %>%  select(c(shrimp_ID,	video_ID,	acc_hr,	Temperature	,use_SPL,	max_SPL,	body_mass_g,	DactylLength_mm	,use_distance	,use_bubble,	max_size_mm2	,growth_ms,	collapse_ms,	rebound_ms,	col_rate_mm2pms))
+
+# dataframe of all data for the 33C treatment.
+all_33 <- rbind(spring_33,summer_33)
+rm("spring_33","summer_33")
+
+# dataframe for all 33C trials that have a measured bubble size.
+size_33 <- all_33[!(all_33$use_bubble=="0"),]
+
+# dataframe for all 33C trials that have a measured sound pressure level (SPL).
+SPL_33 <- all_33[!(all_33$use_SPL=="0"),]
+```
+
+## Create a dataframe that combines the 12-30C (natural) treatments and the 33C (climate) treatment.
+```{r}
+# dataframe of all data in all treatments (12-33C).
+total_df = rbind(all_33,spring_df)
+
+# dataframe for all treatment trials that have a measured bubble size.
+total_size <- total_df[!(total_df$use_bubble=="0"),]
+
+# dataframe for all treatment trials that have a measured sound pressure level (SPL).
+total_SPL <- total_df[!(total_df$use_SPL=="0"),]
+```
+
+
+# Linear Mixed Models (LMM) of 33C treatment
+## Modeling Bubble Size (Random Effect (RE): Shrimp ID; Fixed Effects (FE): Dactyl Length, Body Mass) (33C)
+```{r}
+# Null hypothesis: RE = ID
+size_33_null <- lmer(max_size_mm2 ~ (1 | shrimp_ID), REML =F, data = size_33)
+AIC(logLik(size_33_null))
+
+#FE = Dactyl Length
+size_33_dactyl <- lmer(max_size_mm2 ~ DactylLength_mm + (1 | shrimp_ID), REML =F, data = size_33)
+summary(size_33_dactyl)
+AIC(logLik(size_33_dactyl))
+
+#FE = Body Mass
+size_33_body <- lmer(max_size_mm2 ~ body_mass_g + (1 | shrimp_ID), REML =F, data = size_33)
+summary(size_33_body)
+AIC(logLik(size_33_body))
+```
+
+## Modelling SPL (Random Effect (RE): Shrimp ID; Fixed Effects (FE): Dactyl Length, Body Mass) (33C)
+```{r}
+# Null hypothesis: RE = ID
+SPL_33_null <- lmer(max_SPL ~ (1 | shrimp_ID), REML =F, data = SPL_33)
+AIC(logLik(SPL_33_null))
+
+#FE = Dactyl Length
+SPL_33_dactyl <- lmer(max_SPL ~ DactylLength_mm + (1 | shrimp_ID), REML =F, data = SPL_33)
+summary(SPL_33_dactyl)
+AIC(logLik(SPL_33_dactyl))
+
+#FE = Body Mass
+SPL33_mass <- lmer(max_SPL ~ body_mass_g + (1 | shrimp_ID), REML =F, data = SPL_33)
+summary(SPL33_mass)
+AIC(logLik(SPL33_mass))
+```
+
+# LMM of 12-30C treatments
+## Modelling Bubble Size (Random Effect (RE): Shrimp ID; Fixed Effects (FE): Temperature, Dactyl Length) (12-30C)
+```{r}
+#Null hypothesis: RE = Shrimp ID
+spring_size_null <- lmer(max_size_mm2 ~ (1 | shrimp_ID), REML =F, data = spring_size)
+AIC(logLik(spring_size_null))
+
+#FE = Temperature
+spring_size_temp <- lmer(max_size_mm2 ~ Temperature + (1 | shrimp_ID), REML =F, data = spring_size)
+#summary(spring_size_temp)
+AIC(logLik(spring_size_temp))
+
+#FE = Dactyl Length
+spring_size_dactyl <- lmer(max_size_mm2 ~ DactylLength_mm + (1 | shrimp_ID), REML =F, data = spring_size)
+#summary(spring_size_dactyl)
+AIC(logLik(spring_size_dactyl))
+```
+
+## Modelling SPL (Random Effect (RE): Shrimp ID; Fixed Effects (FE): Temperature, Dactyl Length, Bubble Size) (12-30C)
+```{r}
+#Null hypothesis: RE = ID
+spring_SPL_null <- lmer(max_SPL ~ (1 | shrimp_ID), REML =F, data = spring_SPL)
+#summary(spring_SPL_null)
+AIC(logLik(spring_SPL_null))
+
+#FE = Temperature
+spring_SPL_temp <- lmer(max_SPL ~ Temperature + (1 | shrimp_ID), REML =F, data = spring_SPL)
+#summary(spring_SPL_temp)
+AIC(logLik(spring_SPL_temp))
+
+#FE = Dactyl Length
+spring_SPL_dactyl <- lmer(max_SPL ~ DactylLength_mm + (1 | shrimp_ID), REML =F, data = spring_SPL)
+#summary(spring_SPL_dactyl)
+AIC(logLik(spring_SPL_dactyl))
+
+
+# Modelling SPL using Bubble Size as a predictor
+#NULL HYPOTHESIS: RE = Bubble Size + Shrimp ID
+spring_SPL_bubbleNULL <- lmer(max_SPL ~ (max_size_mm2 || shrimp_ID), REML =F, data = spring_SPL)
+#summary(spring_SPL_bubbleNULL)
+AIC(logLik(spring_SPL_bubbleNULL))
+
+#FE = Bubble Size
+spring_SPL_bubble <- lmer(max_SPL ~ max_size_mm2 + (max_size_mm2 || shrimp_ID), REML =F, data = spring_SPL)
+#summary(spring_SPL_bubble)
+AIC(logLik(spring_SPL_bubble))
+```
+
+
+# LMM of all treatments (12-33C)
+## Modelling Bubble Size (Random Effect (RE): Shrimp ID; Fixed Effects (FE): Temperature, Dactyl Length) (12-33C)
+```{r}
+#Null hyp: RE ID
+size_null <- lmer(max_size_mm2 ~ (1 | shrimp_ID), REML =F, data = total_size)
+AIC(logLik(size_null))
+
+#FE T
+size_t <- lmer(max_size_mm2 ~ Temperature + (1 | shrimp_ID), REML =F, data = total_size)
+summary(size_t)
+AIC(logLik(size_t))
+
+#FE DL
+size_dactyl <- lmer(max_size_mm2 ~ DactylLength_mm + (1 | shrimp_ID), REML =F, data = total_size)
+summary(size_dactyl)
+AIC(logLik(size_dactyl))
+```
+
+## Modelling SPL (Random Effect (RE): Shrimp ID; Fixed Effects (FE): Temperature, Dactyl Length, Bubble Size) (12-33C)
+```{r}
+#Null hyp: RE = ID
+spl_null <- lmer(max_SPL ~ (1 | shrimp_ID), REML =F, data = total_SPL)
+AIC(logLik(spl_null))
+
+#FE = T
+spl_t <- lmer(max_SPL ~ Temperature + (1 | shrimp_ID), REML =F, data = total_SPL)
+#summary(spl_t)
+AIC(logLik(spl_t))
+
+#FE = DL
+spl_dactyl <- lmer(max_SPL ~ DactylLength_mm + (1 | shrimp_ID), REML =F, data = total_SPL)
+#summary(spl_dactyl)
+AIC(logLik(spl_dactyl))
+
+
+#NULL HYP: RE = Bubble size + ID
+SPL_bubbleNULL <- lmer(max_SPL ~ (max_size_mm2 || shrimp_ID), REML =F, data = total_SPL)
+#summary(SPL_bubbleNULL)
+AIC(logLik(SPL_bubbleNULL))
+
+# FE = Bubble size
+SPL_bubble <- lmer(max_SPL ~ max_size_mm2 + (max_size_mm2 || shrimp_ID), REML =F, data = total_SPL)
+summary(SPL_bubble)
+AIC(logLik(SPL_bubble))
+```
+
+
+# SPRING+SUMMER FIGURES
+## (FIG 4A) Size by Temperature (12-30C + 33C)
+```{r}
+fig_Size_T <- ggplot(data = spring_size, aes(x=Temperature, y=max_size_mm2)) +
+  geom_point(aes(color="Natural (12-30°C)"), shape = 3, size = cross_size) +
+  geom_point(data = size_33, aes(color="Climate (33°C)"), shape= 17, size = triangle_size) +
+  scale_color_manual(name=NULL, limits=c("Natural (12-30°C)", "Climate (33°C)"), values = c("black", "red")) +
+  guides(color = guide_legend(override.aes = list(pch = c(3, 17), fill = c("black", "red")))) +
+  theme_classic(base_size = axis_size) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = text_size)) +
+  labs(x="Temperature (°C)",
+       y=bquote("Max Bubble Size "(mm^2)))+
+  scale_y_continuous(breaks = seq(0,100, by = 10)) +
+  scale_x_continuous(breaks = c(12,15,20,25,30,33))
+fig_Size_T
+```
+
+## (FIG 4B) Size by Dactyl Length (12-30C + 33C)
+```{r}
+# FN from: (LMM) 12-33C (BLUE)
+fun.totalsizeDL = function(x) -17.4775 + 7.3542*x
+
+# FN from (LMM) 12-30C (BLACK)
+fun.spring_sizeDL = function(x) -17.781  + 7.481*x
+
+# FN from (LMM) 33C (RED)
+fun.summer_sizeDL = function(x) -19.898  + 7.641*x
+
+fig_Size_DL <- ggplot(data = spring_SPL, aes(x=DactylLength_mm, y=max_size_mm2)) +
+  geom_point(aes(color="Natural (12-30°C)"), shape = 3, size = cross_size) +
+  geom_point(data = SPL_33, aes(color="Climate (33°C)"), shape= 17, size = triangle_size) +
+  scale_color_manual(name=NULL, limits=c("Natural (12-30°C)", "Climate (33°C)"), values = c("black", "red")) +
+  guides(color = guide_legend(override.aes = list(pch = c(3, 17), fill = c("black", "red")))) +
+  theme_classic(base_size = axis_size) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = text_size)) +
+  # stat_function(fun = fun.totalsizeDL, color = "blue") +
+  stat_function(fun = fun.spring_sizeDL, color = "black") +
+  stat_function(fun = fun.summer_sizeDL, color = "red") +
+  labs(x="Dactyl Length (mm)",
+       y="")+
+  scale_y_continuous(breaks = seq(0,100, by = 10)) +
+  scale_x_continuous(breaks = seq(0, 8, by = 1))
+fig_Size_DL
+```
+
+## Arrange (FIGURE 4: A + B)
+```{r}
+ggarrange(fig_Size_T, fig_Size_DL, labels = c("A", "B"),
+          common.legend = TRUE, legend = "bottom",
+          ncol = 2, nrow = 1)
+```
+
+
+## (FIG 5A) SPL by Temperature (12-30C + 33C)
+```{r}
+fig_SPL_T <- ggplot(data = spring_SPL, aes(x=Temperature, y=max_SPL)) +
+  geom_point(aes(color="Natural (12-30°C)"), shape = 3, size = cross_size) +
+  geom_point(data = SPL_33, aes(color="Climate (33°C)"), shape= 17, size = triangle_size) +
+  scale_color_manual(name=NULL, limits=c("Natural (12-30°C)", "Climate (33°C)"), values = c("black", "red")) +
+  guides(color = guide_legend(override.aes = list(pch = c(3, 17), fill = c("black", "red")))) +
+  theme_classic(base_size = axis_size) +
+  theme(legend.position = c(0.15, 0.9),
+        legend.text = element_text(size = text_size)) +
+  labs(x="Temperature (°C)",
+       y=bquote("Max SPL (dB re 1 µPa)"))+
+  scale_y_continuous(breaks = seq(150,300, by = 10)) +
+  scale_x_continuous(breaks = c(12,15,20,25,30,33))
+fig_SPL_T
+```
+
+## (FIG 5B) SPL by Dactyl Length (12-30C + 33C)
+```{r}
+fig_SPL_DL <- ggplot(data = spring_SPL, aes(x=DactylLength_mm, y=max_SPL)) +
+  geom_point(aes(color="Natural (12-30°C)"), shape = 3, size = cross_size) +
+  geom_point(data = SPL_33, aes(color="Climate (33°C)"), shape= 17, size = triangle_size) +
+  scale_color_manual(name=NULL, limits=c("Natural (12-30°C)", "Climate (33°C)"), values = c("black", "red")) +
+  guides(color = guide_legend(override.aes = list(pch = c(3, 17), fill = c("black", "red")))) +
+  theme_classic(base_size = axis_size) +
+  theme(legend.position = c(0.15, 0.9),
+        legend.text = element_text(size = text_size)) +
+  labs(x="Dactyl Length (mm)",
+       y=bquote(""))+
+  scale_y_continuous(breaks = seq(150,300, by = 10)) +
+  scale_x_continuous(breaks = seq(0, 8, by = 1))
+fig_SPL_DL
+```
+
+## Arrange SPL (FIGURE 5: A + B)
+```{r}
+ggarrange(fig_SPL_T, fig_SPL_DL, labels = c("A", "B"),
+          common.legend = TRUE, legend = "bottom",
+          ncol = 2, nrow = 1)
+```
+
+
+## (FIG 6) SPL by Bubble Size (12-30C + 33C)
+```{r}
+# FN from: (LMM) 33C (RED)
+fun.totalSPLsize = function(x) 191.97017 + 0.61187*x
+
+# FN from: (LMM) 12-30C (BLACK)
+fun.spring_SPLsize = function(x) 191.2322  + 0.5613*x
+  
+fig_SPL_size <- ggplot(data = spring_SPL, aes(x=max_size_mm2, y=max_SPL)) +
+  geom_point(aes(color="Natural (12-30°C)"), shape = 3, size = 2) +
+  geom_point(data = SPL_33, aes(color="Climate (33°C)"), shape= 17, size = 2) +
+  scale_color_manual(name=NULL, limits=c("Natural (12-30°C)", "Climate (33°C)"), values = c("black", "red")) +
+  guides(color = guide_legend(override.aes = list(pch = c(3, 17), fill = c("black", "red")))) +
+  theme_classic(base_size = axis_size) +
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = text_size)) +
+    stat_function(fun = fun.totalSPLsize, color = "red") +
+    stat_function(fun = fun.spring_SPLsize, color = "black") +
+  labs(x=bquote("Max Bubble Size "(mm^2)),
+       y=bquote("Max SPL (dB re 1 µPa)"))+
+  scale_y_continuous(breaks = seq(150,300, by = 10)) +
+  scale_x_continuous(breaks = seq(0, 70, by = 10))
+fig_SPL_size
+```
